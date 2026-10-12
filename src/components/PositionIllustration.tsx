@@ -7,48 +7,36 @@ interface Props {
 
 const ManColor = "#4A9EFF";
 const WomanColor = "#FF4D6D";
+const SW = 6; // stroke width for limbs
+const HR = 13; // head radius
 
-// Generate illustration based on position category and ID
 export const PositionIllustration: React.FC<Props> = ({ positionId, className }) => {
   const renderIllustration = () => {
     const category = getCategory(positionId);
-
     switch (category) {
-      case 'face-to-face':
-        return renderFaceToFace(positionId);
-      case 'on-top':
-        return renderOnTop(positionId);
-      case 'from-behind':
-        return renderFromBehind(positionId);
-      case 'side-by-side':
-        return renderSideBySide(positionId);
-      case 'standing':
-        return renderStanding(positionId);
-      case 'seated':
-        return renderSeated(positionId);
-      case 'advanced':
-        return renderAdvanced(positionId);
-      default:
-        return renderFaceToFace(positionId);
+      case 'face-to-face': return renderFaceToFace(positionId);
+      case 'on-top': return renderOnTop(positionId);
+      case 'from-behind': return renderFromBehind(positionId);
+      case 'side-by-side': return renderSideBySide(positionId);
+      case 'standing': return renderStanding(positionId);
+      case 'seated': return renderSeated(positionId);
+      case 'advanced': return renderAdvanced(positionId);
+      default: return renderFaceToFace(positionId);
     }
   };
 
   return (
     <svg
-      viewBox="0 0 240 200"
+      viewBox="0 0 300 240"
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Bed/surface line */}
-      <line x1="15" y1="165" x2="225" y2="165" stroke="#333" strokeWidth="2" strokeDasharray="6,4" />
-
       {renderIllustration()}
-
       {/* Legend */}
-      <circle cx="25" cy="190" r="6" fill={ManColor} />
-      <text x="36" y="194" fill="#888" fontSize="11" fontFamily="sans-serif">Male</text>
-      <circle cx="85" cy="190" r="6" fill={WomanColor} />
-      <text x="96" y="194" fill="#888" fontSize="11" fontFamily="sans-serif">Female</text>
+      <circle cx="30" cy="225" r="8" fill={ManColor} />
+      <text x="44" y="230" fill="#aaa" fontSize="13" fontFamily="sans-serif" fontWeight="bold">Male</text>
+      <circle cx="110" cy="225" r="8" fill={WomanColor} />
+      <text x="124" y="230" fill="#aaa" fontSize="13" fontFamily="sans-serif" fontWeight="bold">Female</text>
     </svg>
   );
 };
@@ -63,162 +51,264 @@ function getCategory(id: number): string {
   return 'advanced';
 }
 
-// Helper to draw a head
-const head = (cx: number, cy: number, color: string, r = 10) => (
-  <circle cx={cx} cy={cy} r={r} fill={color} />
+// Helper components for clear stick figures
+const Head = ({ cx, cy, color }: { cx: number; cy: number; color: string }) => (
+  <circle cx={cx} cy={cy} r={HR} fill={color} />
 );
 
-// Helper to draw a limb
-const limb = (x1: number, y1: number, x2: number, y2: number, color: string, w = 5) => (
+const Limb = ({ x1, y1, x2, y2, color, w = SW }: { x1: number; y1: number; x2: number; y2: number; color: string; w?: number }) => (
   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={w} strokeLinecap="round" />
+);
+
+// Draw a full person: head, torso, two arms, two legs
+const Person = ({ 
+  headX, headY, color, 
+  torsoEndX, torsoEndY,
+  leftArmX, leftArmY, rightArmX, rightArmY,
+  leftLegX, leftLegY, rightLegX, rightLegY
+}: {
+  headX: number; headY: number; color: string;
+  torsoEndX: number; torsoEndY: number;
+  leftArmX: number; leftArmY: number; rightArmX: number; rightArmY: number;
+  leftLegX: number; leftLegY: number; rightLegX: number; rightLegY: number;
+}) => {
+  const shoulderY = headY + HR + 5;
+  return (
+    <>
+      <Head cx={headX} cy={headY} color={color} />
+      {/* Torso */}
+      <Limb x1={headX} y1={headY + HR} x2={torsoEndX} y2={torsoEndY} color={color} w={7} />
+      {/* Arms from shoulder area */}
+      <Limb x1={headX} y1={shoulderY} x2={leftArmX} y2={leftArmY} color={color} />
+      <Limb x1={headX} y1={shoulderY} x2={rightArmX} y2={rightArmY} color={color} />
+      {/* Legs from hip */}
+      <Limb x1={torsoEndX} y1={torsoEndY} x2={leftLegX} y2={leftLegY} color={color} />
+      <Limb x1={torsoEndX} y1={torsoEndY} x2={rightLegX} y2={rightLegY} color={color} />
+    </>
+  );
+};
+
+// Connection indicator (heart/link between figures)
+const Connection = ({ x, y }: { x: number; y: number }) => (
+  <g opacity="0.6">
+    <circle cx={x} cy={y} r="4" fill="#FF6B9D" />
+    <circle cx={x} cy={y} r="7" fill="none" stroke="#FF6B9D" strokeWidth="1" opacity="0.4" />
+  </g>
+);
+
+// Surface/bed indicator
+const Surface = ({ y = 195 }: { y?: number }) => (
+  <line x1="20" y1={y} x2="280" y2={y} stroke="#333" strokeWidth="2" strokeDasharray="8,5" />
 );
 
 function renderFaceToFace(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Missionary
+    // 1. Missionary - man on top, woman on back
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 105, F)}
-        {limb(120, 105, 100, 160, F)}
-        {limb(120, 105, 140, 160, F)}
-        {head(120, 88, M)}
-        {limb(120, 98, 120, 130, M)}
-        {limb(120, 130, 108, 160, M)}
-        {limb(120, 130, 132, 160, M)}
-        {limb(120, 105, 100, 115, M)}
-        {limb(120, 105, 140, 115, M)}
+        <Surface />
+        {/* Woman lying flat on back */}
+        <Person
+          headX={150} headY={182} color={F}
+          torsoEndX={150} torsoEndY={148}
+          leftArmX={125} leftArmY={165} rightArmX={175} rightArmY={165}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        {/* Man on top, propped up */}
+        <Person
+          headX={150} headY={100} color={M}
+          torsoEndX={150} torsoEndY={148}
+          leftArmX={120} leftArmY={130} rightArmX={180} rightArmY={130}
+          leftLegX={135} leftLegY={185} rightLegX={165} rightLegY={185}
+        />
+        <Connection x={150} y={148} />
       </>
     ),
-    // Lotus
+    // 2. Lotus - seated facing, legs wrapped
     () => (
       <>
-        {head(100, 82, M)}
-        {limb(100, 92, 100, 130, M)}
-        {limb(100, 130, 85, 160, M)}
-        {limb(100, 130, 115, 160, M)}
-        {head(135, 85, F)}
-        {limb(135, 95, 128, 128, F)}
-        {limb(128, 128, 105, 140, F)}
-        {limb(128, 128, 140, 150, F)}
-        {limb(100, 100, 128, 100, M)}
-        {limb(135, 102, 108, 102, F)}
+        <Surface />
+        {/* Man seated cross-legged */}
+        <Person
+          headX={120} headY={95} color={M}
+          torsoEndX={120} torsoEndY={150}
+          leftArmX={95} leftArmY={120} rightArmX={145} rightArmY={120}
+          leftLegX={95} leftLegY={175} rightLegX={145} rightLegY={175}
+        />
+        {/* Woman sitting on lap, facing */}
+        <Person
+          headX={165} headY={90} color={F}
+          torsoEndX={160} torsoEndY={140}
+          leftArmX={140} leftArmY={110} rightArmX={185} rightArmY={110}
+          leftLegX={130} leftLegY={160} rightLegX={170} rightLegY={165}
+        />
+        <Connection x={142} y={125} />
       </>
     ),
-    // Spider
+    // 3. Spider - woman legs on man's shoulders
     () => (
       <>
-        {head(120, 150, F)}
-        {limb(120, 140, 120, 115, F)}
-        {limb(120, 115, 95, 80, F)}
-        {limb(120, 115, 145, 80, F)}
-        {head(120, 68, M)}
-        {limb(120, 78, 120, 115, M)}
-        {limb(120, 115, 108, 145, M)}
-        {limb(120, 115, 132, 145, M)}
+        <Surface />
+        {/* Woman lying back, legs raised */}
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={170} rightArmX={175} rightArmY={170}
+          leftLegX={120} leftLegY={105} rightLegX={180} rightLegY={105}
+        />
+        {/* Man kneeling between her legs */}
+        <Person
+          headX={150} headY={72} color={M}
+          torsoEndX={150} torsoEndY={125}
+          leftArmX={125} leftArmY={100} rightArmX={175} rightArmY={100}
+          leftLegX={135} leftLegY={170} rightLegX={165} rightLegY={170}
+        />
+        <Connection x={150} y={130} />
       </>
     ),
-    // Face to face sitting
+    // 4. Face to Face Sitting
     () => (
       <>
-        {head(95, 88, M)}
-        {limb(95, 98, 95, 135, M)}
-        {limb(95, 135, 82, 162, M)}
-        {limb(95, 135, 108, 162, M)}
-        {head(130, 90, F)}
-        {limb(130, 100, 125, 132, F)}
-        {limb(125, 132, 105, 142, F)}
-        {limb(125, 132, 138, 155, F)}
-        {limb(95, 105, 125, 105, M)}
-        {limb(130, 107, 100, 107, F)}
+        <Surface />
+        {/* Man seated on edge */}
+        <Person
+          headX={115} headY={100} color={M}
+          torsoEndX={115} torsoEndY={155}
+          leftArmX={90} leftArmY={125} rightArmX={140} rightArmY={125}
+          leftLegX={100} leftLegY={195} rightLegX={130} rightLegY={195}
+        />
+        {/* Woman on his lap facing him */}
+        <Person
+          headX={170} headY={95} color={F}
+          torsoEndX={165} torsoEndY={145}
+          leftArmX={145} leftArmY={115} rightArmX={190} rightArmY={115}
+          leftLegX={130} leftLegY={165} rightLegX={175} rightLegY={170}
+        />
+        <Connection x={142} y={120} />
       </>
     ),
-    // Shovel
+    // 5. Shovel - legs straight up
     () => (
       <>
-        {head(120, 152, F)}
-        {limb(120, 142, 120, 118, F)}
-        {limb(120, 118, 120, 75, F)}
-        {limb(120, 118, 128, 75, F)}
-        {head(138, 72, M)}
-        {limb(138, 82, 130, 118, M)}
-        {limb(130, 118, 118, 150, M)}
-        {limb(130, 118, 145, 150, M)}
+        <Surface />
+        {/* Woman lying, legs straight up */}
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={170} rightArmX={175} rightArmY={170}
+          leftLegX={140} leftLegY={80} rightLegX={160} rightLegY={80}
+        />
+        {/* Man leaning over her raised legs */}
+        <Person
+          headX={175} headY={75} color={M}
+          torsoEndX={165} torsoEndY={130}
+          leftArmX={145} leftArmY={100} rightArmX={195} rightArmY={100}
+          leftLegX={150} leftLegY={180} rightLegX={180} rightLegY={180}
+        />
+        <Connection x={155} y={115} />
       </>
     ),
-    // Spread eagle
+    // 6. Spread Eagle - legs wide
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 115, F)}
-        {limb(120, 115, 88, 158, F)}
-        {limb(120, 115, 152, 158, F)}
-        {head(120, 82, M)}
-        {limb(120, 92, 120, 125, M)}
-        {limb(120, 125, 108, 158, M)}
-        {limb(120, 125, 132, 158, M)}
-        {limb(120, 100, 100, 110, M)}
-        {limb(120, 100, 140, 110, M)}
+        <Surface />
+        {/* Woman legs spread wide */}
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={120} leftArmY={168} rightArmX={180} rightArmY={168}
+          leftLegX={100} leftLegY={195} rightLegX={200} rightLegY={195}
+        />
+        {/* Man on top */}
+        <Person
+          headX={150} headY={95} color={M}
+          torsoEndX={150} torsoEndY={148}
+          leftArmX={120} leftArmY={118} rightArmX={180} rightArmY={118}
+          leftLegX={135} leftLegY={190} rightLegX={165} rightLegY={190}
+        />
+        <Connection x={150} y={148} />
       </>
     ),
-    // Clamp
+    // 7. Clamp - tight wrap
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 112, F)}
-        {limb(120, 112, 110, 140, F)}
-        {limb(120, 112, 130, 140, F)}
-        {head(120, 82, M)}
-        {limb(120, 92, 120, 125, M)}
-        {limb(120, 125, 110, 158, M)}
-        {limb(120, 125, 130, 158, M)}
-        {limb(110, 140, 120, 125, F)}
-        {limb(130, 140, 120, 125, F)}
+        <Surface />
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={168} rightArmX={175} rightArmY={168}
+          leftLegX={140} leftLegY={140} rightLegX={160} rightLegY={140}
+        />
+        <Person
+          headX={150} headY={92} color={M}
+          torsoEndX={150} torsoEndY={145}
+          leftArmX={125} leftArmY={115} rightArmX={175} rightArmY={115}
+          leftLegX={138} leftLegY={190} rightLegX={162} rightLegY={190}
+        />
+        <Connection x={150} y={145} />
       </>
     ),
-    // Anvil
+    // 8. Anvil - legs pushed back to head
     () => (
       <>
-        {head(120, 152, F)}
-        {limb(120, 142, 120, 120, F)}
-        {limb(120, 120, 95, 90, F)}
-        {limb(120, 120, 145, 90, F)}
-        {head(120, 72, M)}
-        {limb(120, 82, 120, 120, M)}
-        {limb(120, 120, 108, 150, M)}
-        {limb(120, 120, 132, 150, M)}
-        {limb(120, 88, 98, 90, M)}
-        {limb(120, 88, 142, 90, M)}
+        <Surface />
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={170} rightArmX={175} rightArmY={170}
+          leftLegX={115} leftLegY={95} rightLegX={185} rightLegY={95}
+        />
+        <Person
+          headX={150} headY={65} color={M}
+          torsoEndX={150} torsoEndY={120}
+          leftArmX={120} leftArmY={92} rightArmX={180} rightArmY={92}
+          leftLegX={135} leftLegY={175} rightLegX={165} rightLegY={175}
+        />
+        <Connection x={150} y={115} />
       </>
     ),
-    // Squeeze
+    // 9. Squeeze
     () => (
       <>
-        {head(120, 150, F)}
-        {limb(120, 140, 120, 115, F)}
-        {limb(120, 115, 112, 142, F)}
-        {limb(120, 115, 128, 142, F)}
-        {head(120, 85, M)}
-        {limb(120, 95, 120, 125, M)}
-        {limb(120, 125, 112, 155, M)}
-        {limb(120, 125, 128, 155, M)}
+        <Surface />
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={168} rightArmX={175} rightArmY={168}
+          leftLegX={142} leftLegY={145} rightLegX={158} rightLegY={145}
+        />
+        <Person
+          headX={150} headY={95} color={M}
+          torsoEndX={150} torsoEndY={148}
+          leftArmX={125} leftArmY={118} rightArmX={175} rightArmY={118}
+          leftLegX={140} leftLegY={192} rightLegX={160} rightLegY={192}
+        />
+        <Connection x={150} y={148} />
       </>
     ),
-    // Butterfly
+    // 10. Butterfly - edge of bed
     () => (
       <>
-        <line x1="120" y1="120" x2="120" y2="170" stroke="#333" strokeWidth="3" />
-        {head(100, 128, F)}
-        {limb(100, 138, 100, 118, F)}
-        {limb(100, 118, 85, 155, F)}
-        {limb(100, 118, 115, 155, F)}
-        {head(145, 72, M)}
-        {limb(145, 82, 145, 120, M)}
-        {limb(145, 120, 135, 158, M)}
-        {limb(145, 120, 155, 158, M)}
-        {limb(145, 90, 112, 118, M)}
+        {/* Bed edge */}
+        <rect x="130" y="140" width="150" height="8" fill="#2a2a2a" stroke="#444" strokeWidth="1.5" rx="3" />
+        <line x1="135" y1="148" x2="135" y2="200" stroke="#444" strokeWidth="3" />
+        {/* Woman at edge, legs hanging */}
+        <Person
+          headX={115} headY={125} color={F}
+          torsoEndX={120} torsoEndY={145}
+          leftArmX={95} leftArmY={138} rightArmX={140} rightArmY={138}
+          leftLegX={105} leftLegY={185} rightLegX={135} rightLegY={185}
+        />
+        {/* Man standing */}
+        <Person
+          headX={170} headY={60} color={M}
+          torsoEndX={170} torsoEndY={130}
+          leftArmX={145} leftArmY={100} rightArmX={195} rightArmY={100}
+          leftLegX={158} leftLegY={195} rightLegX={182} rightLegY={195}
+        />
+        <Connection x={145} y={130} />
       </>
     ),
   ];
@@ -231,151 +321,207 @@ function renderOnTop(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Cowgirl
+    // 11. Cowgirl
     () => (
       <>
-        {head(120, 145, M)}
-        {limb(120, 135, 120, 110, M)}
-        {limb(120, 110, 102, 158, M)}
-        {limb(120, 110, 138, 158, M)}
-        {head(120, 68, F)}
-        {limb(120, 78, 120, 112, F)}
-        {limb(120, 112, 108, 135, F)}
-        {limb(120, 112, 132, 135, F)}
-        {limb(120, 85, 102, 95, F)}
-        {limb(120, 85, 138, 95, F)}
+        <Surface />
+        <Person
+          headX={150} headY={175} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={155} rightArmX={180} rightArmY={155}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={150} headY={72} color={F}
+          torsoEndX={150} torsoEndY={125}
+          leftArmX={120} leftArmY={95} rightArmX={180} rightArmY={95}
+          leftLegX={130} leftLegY={150} rightLegX={170} rightLegY={150}
+        />
+        <Connection x={150} y={132} />
       </>
     ),
-    // Reverse cowgirl
+    // 12. Reverse Cowgirl
     () => (
       <>
-        {head(120, 145, M)}
-        {limb(120, 135, 120, 110, M)}
-        {limb(120, 110, 102, 158, M)}
-        {limb(120, 110, 138, 158, M)}
-        {head(120, 68, F)}
-        {limb(120, 78, 120, 112, F)}
-        {limb(120, 112, 108, 135, F)}
-        {limb(120, 112, 132, 135, F)}
-        {limb(120, 85, 140, 75, F)}
+        <Surface />
+        <Person
+          headX={150} headY={175} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={155} rightArmX={180} rightArmY={155}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={150} headY={72} color={F}
+          torsoEndX={150} torsoEndY={125}
+          leftArmX={125} leftArmY={85} rightArmX={175} rightArmY={85}
+          leftLegX={130} leftLegY={150} rightLegX={170} rightLegY={150}
+        />
+        {/* Arrow showing facing away */}
+        <path d="M 150 60 L 150 45 L 145 52 M 150 45 L 155 52" fill="none" stroke="#666" strokeWidth="2" />
+        <Connection x={150} y={132} />
       </>
     ),
-    // Amazon
+    // 13. Amazon
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(120, 60, F)}
-        {limb(120, 70, 120, 108, F)}
-        {limb(120, 108, 105, 130, F)}
-        {limb(120, 108, 135, 130, F)}
-        {limb(120, 78, 98, 88, F)}
-        {limb(120, 78, 142, 88, F)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={118} leftArmY={158} rightArmX={182} rightArmY={158}
+          leftLegX={128} leftLegY={195} rightLegX={172} rightLegY={195}
+        />
+        <Person
+          headX={150} headY={58} color={F}
+          torsoEndX={150} torsoEndY={115}
+          leftArmX={118} leftArmY={82} rightArmX={182} rightArmY={82}
+          leftLegX={125} leftLegY={145} rightLegX={175} rightLegY={145}
+        />
+        <Connection x={150} y={125} />
       </>
     ),
-    // Squat
+    // 14. Squat - deep squat
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 115, M)}
-        {limb(120, 115, 102, 158, M)}
-        {limb(120, 115, 138, 158, M)}
-        {head(120, 55, F)}
-        {limb(120, 65, 120, 100, F)}
-        {limb(120, 100, 100, 120, F)}
-        {limb(120, 100, 140, 120, F)}
-        {limb(120, 72, 98, 100, F)}
-        {limb(120, 72, 142, 100, F)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={145}
+          leftArmX={120} leftArmY={160} rightArmX={180} rightArmY={160}
+          leftLegX={128} leftLegY={195} rightLegX={172} rightLegY={195}
+        />
+        <Person
+          headX={150} headY={48} color={F}
+          torsoEndX={150} torsoEndY={100}
+          leftArmX={118} leftArmY={72} rightArmX={182} rightArmY={72}
+          leftLegX={115} leftLegY={135} rightLegX={185} rightLegY={135}
+        />
+        <Connection x={150} y={120} />
       </>
     ),
-    // Seesaw
+    // 15. Seesaw - rocking
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(112, 72, F)}
-        {limb(112, 82, 120, 115, F)}
-        {limb(120, 115, 105, 135, F)}
-        {limb(120, 115, 135, 135, F)}
-        {limb(120, 118, 105, 95, M)}
-        {limb(120, 118, 135, 95, M)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={140} headY={68} color={F}
+          torsoEndX={148} torsoEndY={125}
+          leftArmX={118} leftArmY={92} rightArmX={168} rightArmY={92}
+          leftLegX={128} leftLegY={148} rightLegX={168} rightLegY={148}
+        />
+        {/* Rocking arrows */}
+        <path d="M 120 55 Q 150 45 180 55" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <Connection x={148} y={130} />
       </>
     ),
-    // Waterfall
+    // 16. Waterfall - arching back
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(120, 60, F)}
-        {limb(120, 70, 128, 105, F)}
-        {limb(128, 105, 108, 130, F)}
-        {limb(128, 105, 142, 130, F)}
-        {limb(120, 75, 95, 65, F)}
-        {limb(120, 75, 145, 65, F)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={155} headY={52} color={F}
+          torsoEndX={148} torsoEndY={118}
+          leftArmX={125} leftArmY={62} rightArmX={185} rightArmY={62}
+          leftLegX={125} leftLegY={145} rightLegX={170} rightLegY={148}
+        />
+        <Connection x={150} y={125} />
       </>
     ),
-    // Chair
+    // 17. Chair - seated together
     () => (
       <>
-        <rect x="82" y="115" width="76" height="6" fill="#333" rx="3" />
-        <line x1="88" y1="121" x2="88" y2="160" stroke="#333" strokeWidth="3" />
-        <line x1="152" y1="121" x2="152" y2="160" stroke="#333" strokeWidth="3" />
-        {head(120, 88, M)}
-        {limb(120, 98, 120, 118, M)}
-        {limb(120, 118, 108, 155, M)}
-        {limb(120, 118, 132, 155, M)}
-        {head(120, 55, F)}
-        {limb(120, 65, 120, 92, F)}
-        {limb(120, 92, 108, 112, F)}
-        {limb(120, 92, 132, 112, F)}
+        <Surface />
+        {/* Chair */}
+        <rect x="100" y="140" width="100" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="105" y1="148" x2="105" y2="198" stroke="#555" strokeWidth="3" />
+        <line x1="195" y1="148" x2="195" y2="198" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={150} headY={100} color={M}
+          torsoEndX={150} torsoEndY={142}
+          leftArmX={122} leftArmY={118} rightArmX={178} rightArmY={118}
+          leftLegX={132} leftLegY={180} rightLegX={168} rightLegY={180}
+        />
+        <Person
+          headX={150} headY={52} color={F}
+          torsoEndX={150} torsoEndY={100}
+          leftArmX={122} leftArmY={72} rightArmX={178} rightArmY={72}
+          leftLegX={128} leftLegY={125} rightLegX={172} rightLegY={125}
+        />
+        <Connection x={150} y={100} />
       </>
     ),
-    // Crib
+    // 18. Crib - bouncing
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(120, 62, F)}
-        {limb(120, 72, 120, 108, F)}
-        {limb(120, 108, 108, 130, F)}
-        {limb(120, 108, 132, 130, F)}
-        {limb(120, 118, 105, 88, M)}
-        {limb(120, 118, 135, 88, M)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={150} headY={62} color={F}
+          torsoEndX={150} torsoEndY={118}
+          leftArmX={120} leftArmY={85} rightArmX={180} rightArmY={85}
+          leftLegX={128} leftLegY={142} rightLegX={172} rightLegY={142}
+        />
+        {/* Bounce arrows */}
+        <path d="M 200 70 L 200 90 M 196 85 L 200 90 L 204 85" fill="none" stroke="#666" strokeWidth="2" />
+        <path d="M 200 60 L 200 45 M 196 50 L 200 45 L 204 50" fill="none" stroke="#666" strokeWidth="2" />
+        <Connection x={150} y={128} />
       </>
     ),
-    // Lateral
+    // 19. Lateral - angled
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(145, 72, F)}
-        {limb(145, 82, 135, 112, F)}
-        {limb(135, 112, 115, 132, F)}
-        {limb(135, 112, 148, 135, F)}
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={185} headY={72} color={F}
+          torsoEndX={170} torsoEndY={125}
+          leftArmX={148} leftArmY={95} rightArmX={205} rightArmY={95}
+          leftLegX={140} leftLegY={148} rightLegX={185} rightLegY={155}
+        />
+        <Connection x={162} y={130} />
       </>
     ),
-    // Pendulum
+    // 20. Pendulum - swinging
     () => (
       <>
-        {head(120, 148, M)}
-        {limb(120, 138, 120, 112, M)}
-        {limb(120, 112, 102, 158, M)}
-        {limb(120, 112, 138, 158, M)}
-        {head(108, 65, F)}
-        {limb(108, 75, 120, 112, F)}
-        {limb(120, 112, 105, 132, F)}
-        {limb(120, 112, 135, 132, F)}
-        <path d="M 90 58 Q 120 50 150 58" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="4,3" />
+        <Surface />
+        <Person
+          headX={150} headY={178} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        <Person
+          headX={130} headY={65} color={F}
+          torsoEndX={145} torsoEndY={125}
+          leftArmX={115} leftArmY={90} rightArmX={168} rightArmY={90}
+          leftLegX={120} leftLegY={148} rightLegX={165} rightLegY={148}
+        />
+        {/* Swing arc */}
+        <path d="M 105 55 Q 150 42 195 55" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <Connection x={148} y={130} />
       </>
     ),
   ];
@@ -388,152 +534,221 @@ function renderFromBehind(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Doggy style
+    // 21. Doggy Style
     () => (
       <>
-        {head(82, 108, F)}
-        {limb(92, 108, 115, 115, F)}
-        {limb(115, 115, 128, 158, F)}
-        {limb(115, 115, 105, 158, F)}
-        {limb(92, 108, 85, 155, F)}
-        {head(155, 88, M)}
-        {limb(155, 98, 148, 125, M)}
-        {limb(148, 125, 138, 158, M)}
-        {limb(148, 125, 160, 158, M)}
-        {limb(155, 105, 125, 115, M)}
+        <Surface />
+        {/* Woman on all fours */}
+        <Person
+          headX={95} headY={115} color={F}
+          torsoEndX={145} torsoEndY={140}
+          leftArmX={80} leftArmY={145} rightArmX={105} rightArmY={100}
+          leftLegX={130} leftLegY={195} rightLegX={160} rightLegY={195}
+        />
+        {/* Man kneeling behind */}
+        <Person
+          headX={195} headY={90} color={M}
+          torsoEndX={185} torsoEndY={140}
+          leftArmX={160} leftArmY={118} rightArmX={215} rightArmY={118}
+          leftLegX={170} leftLegY={195} rightLegX={200} rightLegY={195}
+        />
+        <Connection x={165} y={140} />
       </>
     ),
-    // Prone bone
+    // 22. Prone Bone - flat
     () => (
       <>
-        {head(75, 150, F)}
-        {limb(85, 150, 140, 150, F)}
-        {limb(140, 150, 155, 158, F)}
-        {limb(140, 150, 155, 142, F)}
-        {head(135, 132, M)}
-        {limb(135, 142, 135, 150, M)}
-        {limb(135, 138, 120, 148, M)}
+        <Surface />
+        {/* Woman flat on stomach */}
+        <Person
+          headX={80} headY={178} color={F}
+          torsoEndX={155} torsoEndY={175}
+          leftArmX={65} leftArmY={185} rightArmX={95} rightArmY={168}
+          leftLegX={175} leftLegY={190} rightLegX={175} rightLegY={165}
+        />
+        {/* Man on top */}
+        <Person
+          headX={148} headY={148} color={M}
+          torsoEndX={155} torsoEndY={175}
+          leftArmX={130} leftArmY={162} rightArmX={168} rightArmY={162}
+          leftLegX={165} leftLegY={195} rightLegX={180} rightLegY={185}
+        />
+        <Connection x={155} y={175} />
       </>
     ),
-    // Wheelbarrow
+    // 23. Wheelbarrow
     () => (
       <>
-        {head(68, 115, F)}
-        {limb(78, 115, 98, 120, F)}
-        {limb(78, 115, 72, 158, F)}
-        {limb(98, 120, 145, 88, F)}
-        {limb(98, 120, 145, 95, F)}
-        {head(162, 58, M)}
-        {limb(162, 68, 162, 112, M)}
-        {limb(162, 112, 152, 158, M)}
-        {limb(162, 112, 172, 158, M)}
-        {limb(162, 78, 145, 90, M)}
+        <Surface />
+        {/* Woman on hands, legs up */}
+        <Person
+          headX={75} headY={118} color={F}
+          torsoEndX={120} torsoEndY={130}
+          leftArmX={60} leftArmY={155} rightArmX={90} rightArmY={105}
+          leftLegX={175} leftLegY={85} rightLegX={175} rightLegY={100}
+        />
+        {/* Man standing, holding legs */}
+        <Person
+          headX={200} headY={52} color={M}
+          torsoEndX={200} torsoEndY={130}
+          leftArmX={175} leftArmY={90} rightArmX={225} rightArmY={90}
+          leftLegX={185} leftLegY={195} rightLegX={215} rightLegY={195}
+        />
+        <Connection x={175} y={92} />
       </>
     ),
-    // Flat doggy
+    // 24. Flat Doggy
     () => (
       <>
-        {head(75, 148, F)}
-        {limb(85, 145, 128, 140, F)}
-        {limb(128, 140, 142, 158, F)}
-        {limb(128, 140, 122, 158, F)}
-        {limb(85, 145, 78, 158, F)}
-        {head(162, 100, M)}
-        {limb(162, 110, 155, 135, M)}
-        {limb(155, 135, 148, 158, M)}
-        {limb(155, 135, 165, 158, M)}
-        {limb(162, 118, 135, 140, M)}
+        <Surface />
+        {/* Pillow */}
+        <ellipse cx="100" cy="175" rx="28" ry="10" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" />
+        {/* Woman flat, hips slightly raised */}
+        <Person
+          headX={80} headY={170} color={F}
+          torsoEndX={145} torsoEndY={162}
+          leftArmX={65} leftArmY={185} rightArmX={95} rightArmY={160}
+          leftLegX={165} leftLegY={195} rightLegX={160} rightLegY={178}
+        />
+        {/* Man kneeling behind */}
+        <Person
+          headX={200} headY={105} color={M}
+          torsoEndX={190} torsoEndY={155}
+          leftArmX={165} leftArmY={135} rightArmX={218} rightArmY={135}
+          leftLegX={175} leftLegY={195} rightLegX={205} rightLegY={195}
+        />
+        <Connection x={170} y={160} />
       </>
     ),
-    // Scoop
+    // 25. Scoop - spooning from behind
     () => (
       <>
-        {head(88, 140, F)}
-        {limb(98, 140, 130, 145, F)}
-        {limb(130, 145, 145, 155, F)}
-        {limb(130, 145, 142, 138, F)}
-        {head(108, 122, M)}
-        {limb(118, 122, 138, 132, M)}
-        {limb(138, 132, 150, 148, M)}
-        {limb(138, 132, 150, 122, M)}
-        {limb(118, 122, 108, 138, M)}
+        <Surface />
+        {/* Woman on side */}
+        <Person
+          headX={95} headY={160} color={F}
+          torsoEndX={145} torsoEndY={165}
+          leftArmX={80} leftArmY={172} rightArmX={110} rightArmY={150}
+          leftLegX={165} leftLegY={180} rightLegX={162} rightLegY={155}
+        />
+        {/* Man behind, wrapping around */}
+        <Person
+          headX={115} headY={130} color={M}
+          torsoEndX={155} torsoEndY={155}
+          leftArmX={100} leftArmY={145} rightArmX={135} rightArmY={120}
+          leftLegX={170} leftLegY={185} rightLegX={175} rightLegY={165}
+        />
+        <Connection x={150} y={158} />
       </>
     ),
-    // Piledriver
+    // 26. Piledriver
     () => (
       <>
-        {head(120, 152, F)}
-        {limb(120, 142, 120, 118, F)}
-        {limb(120, 118, 92, 88, F)}
-        {limb(120, 118, 148, 88, F)}
-        {head(120, 62, M)}
-        {limb(120, 72, 120, 105, M)}
-        {limb(120, 105, 108, 138, M)}
-        {limb(120, 105, 132, 138, M)}
-        {limb(120, 80, 95, 88, M)}
-        {limb(120, 80, 145, 88, M)}
+        <Surface />
+        {/* Woman folded */}
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={125} leftArmY={170} rightArmX={175} rightArmY={170}
+          leftLegX={110} leftLegY={95} rightLegX={190} rightLegY={95}
+        />
+        {/* Man kneeling, lifting */}
+        <Person
+          headX={150} headY={55} color={M}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={118} leftArmY={82} rightArmX={182} rightArmY={82}
+          leftLegX={130} leftLegY={170} rightLegX={170} rightLegY={170}
+        />
+        <Connection x={150} y={115} />
       </>
     ),
-    // Bridge
+    // 27. Bridge
     () => (
       <>
-        {head(75, 148, F)}
-        {limb(85, 145, 118, 122, F)}
-        {limb(118, 122, 142, 155, F)}
-        {limb(118, 122, 100, 155, F)}
-        {limb(85, 145, 78, 158, F)}
-        {head(158, 88, M)}
-        {limb(158, 98, 150, 128, M)}
-        {limb(150, 128, 142, 158, M)}
-        {limb(150, 128, 162, 158, M)}
-        {limb(158, 105, 130, 122, M)}
+        <Surface />
+        {/* Woman arched like bridge */}
+        <Person
+          headX={80} headY={170} color={F}
+          torsoEndX={140} torsoEndY={130}
+          leftArmX={65} leftArmY={185} rightArmX={95} rightArmY={158}
+          leftLegX={165} leftLegY={190} rightLegX={150} rightLegY={165}
+        />
+        {/* Man kneeling, supporting */}
+        <Person
+          headX={195} headY={88} color={M}
+          torsoEndX={185} torsoEndY={140}
+          leftArmX={158} leftArmY={118} rightArmX={215} rightArmY={118}
+          leftLegX={170} leftLegY={195} rightLegX={200} rightLegY={195}
+        />
+        <Connection x={165} y={135} />
       </>
     ),
-    // Arch
+    // 28. Arch - deep arch
     () => (
       <>
-        {head(78, 140, F)}
-        {limb(88, 138, 112, 125, F)}
-        {limb(112, 125, 125, 155, F)}
-        {limb(112, 125, 100, 155, F)}
-        {limb(88, 138, 82, 158, F)}
-        {head(158, 92, M)}
-        {limb(158, 102, 150, 130, M)}
-        {limb(150, 130, 142, 158, M)}
-        {limb(150, 130, 162, 158, M)}
-        {limb(158, 110, 125, 125, M)}
+        <Surface />
+        {/* Woman arched deeply, head down */}
+        <Person
+          headX={85} headY={160} color={F}
+          torsoEndX={130} torsoEndY={130}
+          leftArmX={70} leftArmY={175} rightArmX={100} rightArmY={148}
+          leftLegX={150} leftLegY={190} rightLegX={145} rightLegY={168}
+        />
+        {/* Man behind */}
+        <Person
+          headX={195} headY={95} color={M}
+          torsoEndX={185} torsoEndY={145}
+          leftArmX={158} leftArmY={125} rightArmX={215} rightArmY={125}
+          leftLegX={170} leftLegY={195} rightLegX={200} rightLegY={195}
+        />
+        <Connection x={162} y={140} />
       </>
     ),
-    // Slope
+    // 29. Slope - inclined
     () => (
       <>
-        <ellipse cx="100" cy="145" rx="25" ry="10" fill="#2a2a2a" stroke="#444" strokeWidth="1" />
-        {head(82, 135, F)}
-        {limb(92, 135, 122, 140, F)}
-        {limb(122, 140, 138, 155, F)}
-        {limb(122, 140, 118, 158, F)}
-        {limb(92, 135, 85, 158, F)}
-        {head(162, 95, M)}
-        {limb(162, 105, 155, 132, M)}
-        {limb(155, 132, 148, 158, M)}
-        {limb(155, 132, 165, 158, M)}
-        {limb(162, 112, 130, 140, M)}
+        <Surface />
+        {/* Pillow/wedge */}
+        <polygon points="85,185 135,185 135,165" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" />
+        {/* Woman face down, hips elevated */}
+        <Person
+          headX={80} headY={175} color={F}
+          torsoEndX={140} torsoEndY={158}
+          leftArmX={65} leftArmY={185} rightArmX={95} rightArmY={165}
+          leftLegX={160} leftLegY={185} rightLegX={155} rightLegY={170}
+        />
+        {/* Man kneeling behind */}
+        <Person
+          headX={200} headY={98} color={M}
+          torsoEndX={190} torsoEndY={150}
+          leftArmX={162} leftArmY={128} rightArmX={218} rightArmY={128}
+          leftLegX={175} leftLegY={195} rightLegX={205} rightLegY={195}
+        />
+        <Connection x={168} y={155} />
       </>
     ),
-    // Helicopter
+    // 30. Helicopter - rotating
     () => (
       <>
-        {head(95, 118, F)}
-        {limb(105, 118, 125, 125, F)}
-        {limb(125, 125, 118, 155, F)}
-        {limb(125, 125, 140, 148, F)}
-        {limb(105, 118, 95, 155, F)}
-        {head(158, 92, M)}
-        {limb(158, 102, 150, 128, M)}
-        {limb(150, 128, 142, 158, M)}
-        {limb(150, 128, 162, 158, M)}
-        {limb(158, 110, 130, 125, M)}
-        <path d="M 142 105 Q 150 98 158 105" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3,3" />
+        <Surface />
+        {/* Woman on all fours */}
+        <Person
+          headX={95} headY={118} color={F}
+          torsoEndX={145} torsoEndY={142}
+          leftArmX={80} leftArmY={148} rightArmX={108} rightArmY={105}
+          leftLegX={130} leftLegY={195} rightLegX={160} rightLegY={195}
+        />
+        {/* Man behind, at angle */}
+        <Person
+          headX={200} headY={95} color={M}
+          torsoEndX={188} torsoEndY={142}
+          leftArmX={162} leftArmY={120} rightArmX={220} rightArmY={120}
+          leftLegX={172} leftLegY={195} rightLegX={205} rightLegY={195}
+        />
+        {/* Rotation arrow */}
+        <path d="M 175 100 Q 190 85 205 100" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <polygon points="205,100 200,95 200,105" fill="#666" />
+        <Connection x={168} y={142} />
       </>
     ),
   ];
@@ -546,146 +761,204 @@ function renderSideBySide(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Spooning
+    // 31. Spooning
     () => (
       <>
-        {head(88, 138, F)}
-        {limb(98, 138, 130, 142, F)}
-        {limb(130, 142, 145, 155, F)}
-        {limb(130, 142, 140, 135, F)}
-        {head(102, 120, M)}
-        {limb(112, 120, 138, 128, M)}
-        {limb(138, 128, 150, 145, M)}
-        {limb(138, 128, 148, 120, M)}
-        {limb(112, 120, 102, 138, M)}
+        <Surface />
+        {/* Woman on side */}
+        <Person
+          headX={100} headY={155} color={F}
+          torsoEndX={155} torsoEndY={162}
+          leftArmX={85} leftArmY={168} rightArmX={115} rightArmY={145}
+          leftLegX={175} leftLegY={178} rightLegX={172} rightLegY={155}
+        />
+        {/* Man behind, wrapping */}
+        <Person
+          headX={118} headY={125} color={M}
+          torsoEndX={165} torsoEndY={150}
+          leftArmX={100} leftArmY={140} rightArmX={140} rightArmY={115}
+          leftLegX={180} leftLegY={182} rightLegX={185} rightLegY={162}
+        />
+        <Connection x={160} y={155} />
       </>
     ),
-    // Face to face side
+    // 32. Face to Face Side
     () => (
       <>
-        {head(85, 132, F)}
-        {limb(95, 132, 118, 138, F)}
-        {limb(118, 138, 130, 155, F)}
-        {limb(118, 138, 112, 155, F)}
-        {head(155, 132, M)}
-        {limb(145, 132, 122, 138, M)}
-        {limb(122, 138, 130, 155, M)}
-        {limb(122, 138, 115, 155, M)}
-        {limb(95, 132, 108, 125, F)}
-        {limb(145, 132, 132, 125, M)}
+        <Surface />
+        {/* Woman on side facing right */}
+        <Person
+          headX={95} headY={148} color={F}
+          torsoEndX={140} torsoEndY={158}
+          leftArmX={80} leftArmY={162} rightArmX={110} rightArmY={138}
+          leftLegX={160} leftLegY={178} rightLegX={155} rightLegY={155}
+        />
+        {/* Man on side facing left */}
+        <Person
+          headX={205} headY={148} color={M}
+          torsoEndX={160} torsoEndY={158}
+          leftArmX={190} leftArmY={138} rightArmX={220} rightArmY={162}
+          leftLegX={145} leftLegY={155} rightLegX={140} rightLegY={178}
+        />
+        <Connection x={150} y={158} />
       </>
     ),
-    // Scissors
+    // 33. Scissors
     () => (
       <>
-        {head(80, 135, F)}
-        {limb(90, 135, 118, 140, F)}
-        {limb(118, 140, 145, 128, F)}
-        {limb(118, 140, 140, 155, F)}
-        {head(160, 128, M)}
-        {limb(150, 128, 122, 140, M)}
-        {limb(122, 140, 92, 155, M)}
-        {limb(122, 140, 98, 128, M)}
+        <Surface />
+        {/* Woman */}
+        <Person
+          headX={80} headY={152} color={F}
+          torsoEndX={130} torsoEndY={160}
+          leftArmX={65} leftArmY={165} rightArmX={95} rightArmY={142}
+          leftLegX={170} leftLegY={148} rightLegX={165} rightLegY={178}
+        />
+        {/* Man */}
+        <Person
+          headX={220} headY={148} color={M}
+          torsoEndX={170} torsoEndY={160}
+          leftArmX={205} leftArmY={140} rightArmX={235} rightArmY={160}
+          leftLegX={135} leftLegY={178} rightLegX={130} rightLegY={148}
+        />
+        <Connection x={150} y={162} />
       </>
     ),
-    // Zipper
+    // 34. Zipper
     () => (
       <>
-        {head(85, 128, F)}
-        {limb(95, 128, 118, 135, F)}
-        {limb(118, 135, 132, 150, F)}
-        {limb(118, 135, 125, 158, F)}
-        {head(155, 128, M)}
-        {limb(145, 128, 122, 135, M)}
-        {limb(122, 135, 108, 150, M)}
-        {limb(122, 135, 115, 158, M)}
-        {limb(95, 128, 118, 122, F)}
-        {limb(145, 128, 122, 122, M)}
+        <Surface />
+        <Person
+          headX={90} headY={142} color={F}
+          torsoEndX={138} torsoEndY={155}
+          leftArmX={75} leftArmY={155} rightArmX={105} rightArmY={132}
+          leftLegX={158} leftLegY={175} rightLegX={152} rightLegY={155}
+        />
+        <Person
+          headX={210} headY={142} color={M}
+          torsoEndX={162} torsoEndY={155}
+          leftArmX={195} leftArmY={132} rightArmX={225} rightArmY={155}
+          leftLegX={148} leftLegY={155} rightLegX={142} rightLegY={175}
+        />
+        <Connection x={150} y={155} />
       </>
     ),
-    // Crab
+    // 35. Crab - offset angle
     () => (
       <>
-        {head(85, 138, F)}
-        {limb(95, 138, 122, 135, F)}
-        {limb(122, 135, 138, 155, F)}
-        {limb(122, 135, 118, 155, F)}
-        {head(158, 108, M)}
-        {limb(152, 115, 140, 135, M)}
-        {limb(140, 135, 130, 158, M)}
-        {limb(140, 135, 152, 158, M)}
-        {limb(152, 120, 128, 135, M)}
+        <Surface />
+        <Person
+          headX={90} headY={158} color={F}
+          torsoEndX={140} torsoEndY={155}
+          leftArmX={75} leftArmY={170} rightArmX={105} rightArmY={148}
+          leftLegX={160} leftLegY={178} rightLegX={155} rightLegY={155}
+        />
+        <Person
+          headX={205} headY={115} color={M}
+          torsoEndX={185} torsoEndY={155}
+          leftArmX={160} leftArmY={135} rightArmX={225} rightArmY={135}
+          leftLegX={170} leftLegY={195} rightLegX={200} rightLegY={195}
+        />
+        <Connection x={165} y={155} />
       </>
     ),
-    // Starfish
+    // 36. Starfish
     () => (
       <>
-        {head(85, 135, F)}
-        {limb(95, 135, 125, 140, F)}
-        {limb(125, 140, 148, 128, F)}
-        {limb(125, 140, 145, 155, F)}
-        {limb(95, 135, 85, 158, F)}
-        {head(145, 118, M)}
-        {limb(138, 125, 128, 140, M)}
-        {limb(128, 140, 122, 158, M)}
-        {limb(128, 140, 140, 158, M)}
-        {limb(138, 128, 128, 140, M)}
+        <Surface />
+        <Person
+          headX={90} headY={155} color={F}
+          torsoEndX={140} torsoEndY={160}
+          leftArmX={70} leftArmY={170} rightArmX={105} rightArmY={142}
+          leftLegX={175} leftLegY={148} rightLegX={170} rightLegY={180}
+        />
+        <Person
+          headX={175} headY={120} color={M}
+          torsoEndX={165} torsoEndY={158}
+          leftArmX={148} leftArmY={138} rightArmX={198} rightArmY={138}
+          leftLegX={150} leftLegY={190} rightLegX={180} rightLegY={190}
+        />
+        <Connection x={158} y={158} />
       </>
     ),
-    // Triangle
+    // 37. Triangle - T-shape
     () => (
       <>
-        {head(118, 148, F)}
-        {limb(118, 138, 118, 112, F)}
-        {limb(118, 112, 100, 155, F)}
-        {limb(118, 112, 136, 155, F)}
-        {head(172, 108, M)}
-        {limb(165, 115, 138, 125, M)}
-        {limb(138, 125, 128, 155, M)}
-        {limb(138, 125, 150, 155, M)}
+        <Surface />
+        {/* Woman lying vertical */}
+        <Person
+          headX={150} headY={185} color={F}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={125} leftArmY={165} rightArmX={175} rightArmY={165}
+          leftLegX={130} leftLegY={195} rightLegX={170} rightLegY={195}
+        />
+        {/* Man perpendicular */}
+        <Person
+          headX={225} headY={118} color={M}
+          torsoEndX={180} torsoEndY={140}
+          leftArmX={210} leftArmY={105} rightArmX={240} rightArmY={130}
+          leftLegX={165} leftLegY={170} rightLegX={175} rightLegY={155}
+        />
+        <Connection x={170} y={140} />
       </>
     ),
-    // Pretzel
+    // 38. Pretzel - tangled
     () => (
       <>
-        {head(90, 122, F)}
-        {limb(100, 122, 118, 132, F)}
-        {limb(118, 132, 140, 122, F)}
-        {limb(118, 132, 110, 155, F)}
-        {head(148, 122, M)}
-        {limb(138, 122, 118, 132, M)}
-        {limb(118, 132, 98, 148, M)}
-        {limb(118, 132, 128, 155, M)}
-        <path d="M 110 155 Q 120 145 128 155" fill="none" stroke="#999" strokeWidth="1.5" strokeDasharray="3,3" />
+        <Surface />
+        <Person
+          headX={95} headY={130} color={F}
+          torsoEndX={135} torsoEndY={150}
+          leftArmX={78} leftArmY={145} rightArmX={110} rightArmY={120}
+          leftLegX={165} leftLegY={138} rightLegX={145} rightLegY={180}
+        />
+        <Person
+          headX={205} headY={130} color={M}
+          torsoEndX={165} torsoEndY={150}
+          leftArmX={190} leftArmY={120} rightArmX={222} rightArmY={145}
+          leftLegX={155} leftLegY={180} rightLegX={135} rightLegY={138}
+        />
+        {/* Tangle indicator */}
+        <path d="M 140 170 Q 150 160 160 170 Q 170 180 160 185" fill="none" stroke="#666" strokeWidth="1.5" strokeDasharray="3,3" />
+        <Connection x={150} y={150} />
       </>
     ),
-    // Spoon fork
+    // 39. Spoon Fork - leg raised
     () => (
       <>
-        {head(85, 135, F)}
-        {limb(95, 135, 122, 138, F)}
-        {limb(122, 138, 138, 122, F)}
-        {limb(122, 138, 135, 155, F)}
-        {head(105, 115, M)}
-        {limb(115, 115, 130, 130, M)}
-        {limb(130, 130, 138, 155, M)}
-        {limb(130, 130, 145, 145, M)}
-        {limb(115, 115, 108, 135, M)}
+        <Surface />
+        <Person
+          headX={95} headY={155} color={F}
+          torsoEndX={145} torsoEndY={160}
+          leftArmX={80} leftArmY={168} rightArmX={110} rightArmY={145}
+          leftLegX={170} leftLegY={140} rightLegX={165} rightLegY={178}
+        />
+        <Person
+          headX={115} headY={122} color={M}
+          torsoEndX={158} torsoEndY={148}
+          leftArmX={98} leftArmY={138} rightArmX={135} rightArmY={112}
+          leftLegX={172} leftLegY={180} rightLegX={178} rightLegY={160}
+        />
+        <Connection x={158} y={155} />
       </>
     ),
-    // Lazy dog
+    // 40. Lazy Dog
     () => (
       <>
-        {head(80, 142, F)}
-        {limb(90, 142, 125, 142, F)}
-        {limb(125, 142, 140, 155, F)}
-        {limb(125, 142, 138, 135, F)}
-        {limb(90, 142, 82, 158, F)}
-        {head(145, 122, M)}
-        {limb(138, 128, 130, 142, M)}
-        {limb(130, 142, 122, 158, M)}
-        {limb(130, 142, 142, 158, M)}
-        {limb(138, 132, 128, 142, M)}
+        <Surface />
+        <Person
+          headX={85} headY={168} color={F}
+          torsoEndX={140} torsoEndY={168}
+          leftArmX={70} leftArmY={178} rightArmX={100} rightArmY={158}
+          leftLegX={160} leftLegY={180} rightLegX={155} rightLegY={160}
+        />
+        <Person
+          headX={185} headY={130} color={M}
+          torsoEndX={170} torsoEndY={165}
+          leftArmX={148} leftArmY={148} rightArmX={205} rightArmY={148}
+          leftLegX={155} leftLegY={195} rightLegX={185} rightLegY={195}
+        />
+        <Connection x={158} y={166} />
       </>
     ),
   ];
@@ -698,161 +971,206 @@ function renderStanding(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Standing face to face
+    // 41. Standing Face to Face
     () => (
       <>
-        {head(95, 52, F)}
-        {limb(95, 62, 95, 105, F)}
-        {limb(95, 105, 85, 158, F)}
-        {limb(95, 105, 105, 158, F)}
-        {limb(95, 72, 115, 82, F)}
-        {head(145, 48, M)}
-        {limb(145, 58, 145, 105, M)}
-        {limb(145, 105, 135, 158, M)}
-        {limb(145, 105, 155, 158, M)}
-        {limb(145, 68, 115, 82, M)}
+        <Surface y={200} />
+        <Person
+          headX={110} headY={52} color={F}
+          torsoEndX={110} torsoEndY={125}
+          leftArmX={85} leftArmY={85} rightArmX={135} rightArmY={85}
+          leftLegX={95} leftLegY={200} rightLegX={125} rightLegY={200}
+        />
+        <Person
+          headX={190} headY={48} color={M}
+          torsoEndX={190} torsoEndY={125}
+          leftArmX={165} leftArmY={82} rightArmX={215} rightArmY={82}
+          leftLegX={175} leftLegY={200} rightLegX={205} rightLegY={200}
+        />
+        <Connection x={150} y={110} />
       </>
     ),
-    // Standing rear
+    // 42. Standing Rear
     () => (
       <>
-        {head(100, 58, F)}
-        {limb(100, 68, 100, 112, F)}
-        {limb(100, 112, 90, 158, F)}
-        {limb(100, 112, 110, 158, F)}
-        {limb(100, 78, 88, 92, F)}
-        {head(148, 52, M)}
-        {limb(148, 62, 142, 108, M)}
-        {limb(142, 108, 132, 158, M)}
-        {limb(142, 108, 155, 158, M)}
-        {limb(148, 72, 112, 92, M)}
+        <Surface y={200} />
+        <Person
+          headX={120} headY={58} color={F}
+          torsoEndX={120} torsoEndY={130}
+          leftArmX={95} leftArmY={90} rightArmX={145} rightArmY={90}
+          leftLegX={105} leftLegY={200} rightLegX={135} rightLegY={200}
+        />
+        <Person
+          headX={190} headY={50} color={M}
+          torsoEndX={180} torsoEndY={130}
+          leftArmX={155} leftArmY={88} rightArmX={210} rightArmY={88}
+          leftLegX={165} leftLegY={200} rightLegX={195} rightLegY={200}
+        />
+        <Connection x={155} y={125} />
       </>
     ),
-    // The Wall
+    // 43. The Wall
     () => (
       <>
-        <line x1="65" y1="30" x2="65" y2="162" stroke="#444" strokeWidth="4" />
-        {head(88, 52, F)}
-        {limb(88, 62, 92, 108, F)}
-        {limb(92, 108, 85, 148, F)}
-        {limb(92, 108, 110, 132, F)}
-        {limb(88, 72, 72, 58, F)}
-        {head(130, 48, M)}
-        {limb(130, 58, 125, 105, M)}
-        {limb(125, 105, 118, 158, M)}
-        {limb(125, 105, 138, 158, M)}
-        {limb(130, 68, 100, 88, M)}
+        <Surface y={200} />
+        {/* Wall */}
+        <rect x="50" y="30" width="12" height="175" fill="#2a2a2a" stroke="#444" strokeWidth="1.5" rx="2" />
+        <Person
+          headX={95} headY={55} color={F}
+          torsoEndX={100} torsoEndY={130}
+          leftArmX={72} leftArmY={78} rightArmX={120} rightArmY={78}
+          leftLegX={85} leftLegY={175} rightLegX={115} rightLegY={155}
+        />
+        <Person
+          headX={165} headY={48} color={M}
+          torsoEndX={155} torsoEndY={128}
+          leftArmX={130} leftArmY={85} rightArmX={185} rightArmY={85}
+          leftLegX={140} leftLegY={200} rightLegX={170} rightLegY={200}
+        />
+        <Connection x={130} y={115} />
       </>
     ),
-    // One-legged stand
+    // 44. One-Legged Stand
     () => (
       <>
-        <rect x="58" y="100" width="30" height="6" fill="#333" rx="3" />
-        {head(92, 52, F)}
-        {limb(92, 62, 92, 108, F)}
-        {limb(92, 108, 85, 158, F)}
-        {limb(92, 108, 68, 103, F)}
-        {limb(92, 72, 78, 85, F)}
-        {head(142, 48, M)}
-        {limb(142, 58, 138, 108, M)}
-        {limb(138, 108, 128, 158, M)}
-        {limb(138, 108, 150, 158, M)}
-        {limb(142, 68, 102, 88, M)}
+        <Surface y={200} />
+        {/* Elevated surface */}
+        <rect x="55" y="118" width="40" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <Person
+          headX={100} headY={52} color={F}
+          torsoEndX={100} torsoEndY={125}
+          leftArmX={75} leftArmY={85} rightArmX={125} rightArmY={85}
+          leftLegX={85} leftLegY={200} rightLegX={72} rightLegY={122}
+        />
+        <Person
+          headX={185} headY={48} color={M}
+          torsoEndX={180} torsoEndY={128}
+          leftArmX={155} leftArmY={85} rightArmX={208} rightArmY={85}
+          leftLegX={165} leftLegY={200} rightLegX={195} rightLegY={200}
+        />
+        <Connection x={145} y={118} />
       </>
     ),
-    // The Lift
+    // 45. The Lift
     () => (
       <>
-        {head(120, 38, M)}
-        {limb(120, 48, 120, 98, M)}
-        {limb(120, 98, 108, 155, M)}
-        {limb(120, 98, 132, 155, M)}
-        {head(120, 62, F)}
-        {limb(120, 72, 120, 98, F)}
-        {limb(120, 98, 102, 108, F)}
-        {limb(120, 98, 138, 108, F)}
-        {limb(120, 52, 102, 88, M)}
-        {limb(120, 52, 138, 88, M)}
+        <Surface y={200} />
+        <Person
+          headX={150} headY={32} color={M}
+          torsoEndX={150} torsoEndY={115}
+          leftArmX={118} leftArmY={72} rightArmX={182} rightArmY={72}
+          leftLegX={132} leftLegY={200} rightLegX={168} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={62} color={F}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={118} leftArmY={85} rightArmX={182} rightArmY={85}
+          leftLegX={115} leftLegY={125} rightLegX={185} rightLegY={125}
+        />
+        <Connection x={150} y={108} />
       </>
     ),
-    // Balcony
+    // 46. Balcony
     () => (
       <>
-        <line x1="42" y1="98" x2="198" y2="98" stroke="#444" strokeWidth="3" />
-        <line x1="42" y1="98" x2="42" y2="162" stroke="#444" strokeWidth="3" />
-        <line x1="198" y1="98" x2="198" y2="162" stroke="#444" strokeWidth="3" />
-        {head(98, 58, F)}
-        {limb(98, 68, 98, 100, F)}
-        {limb(98, 100, 88, 135, F)}
-        {limb(98, 100, 112, 118, F)}
-        {head(142, 52, M)}
-        {limb(142, 62, 138, 100, M)}
-        {limb(138, 100, 128, 135, M)}
-        {limb(138, 100, 152, 135, M)}
-        {limb(142, 72, 108, 82, M)}
+        <Surface y={200} />
+        {/* Railing */}
+        <line x1="40" y1="115" x2="260" y2="115" stroke="#555" strokeWidth="4" />
+        <line x1="40" y1="115" x2="40" y2="200" stroke="#555" strokeWidth="3" />
+        <line x1="260" y1="115" x2="260" y2="200" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={115} headY={58} color={F}
+          torsoEndX={115} torsoEndY={118}
+          leftArmX={90} leftArmY={82} rightArmX={140} rightArmY={82}
+          leftLegX={100} leftLegY={165} rightLegX={130} rightLegY={148}
+        />
+        <Person
+          headX={185} headY={52} color={M}
+          torsoEndX={180} torsoEndY={118}
+          leftArmX={155} leftArmY={80} rightArmX={208} rightArmY={80}
+          leftLegX={165} leftLegY={165} rightLegX={195} rightLegY={165}
+        />
+        <Connection x={150} y={110} />
       </>
     ),
-    // Surfboard
+    // 47. Surfboard
     () => (
       <>
-        {head(120, 38, M)}
-        {limb(120, 48, 120, 98, M)}
-        {limb(120, 98, 108, 155, M)}
-        {limb(120, 98, 132, 155, M)}
-        {head(120, 60, F)}
-        {limb(120, 70, 120, 98, F)}
-        {limb(120, 98, 102, 105, F)}
-        {limb(120, 98, 138, 105, F)}
-        {limb(120, 52, 102, 85, M)}
-        {limb(120, 52, 138, 85, M)}
+        <Surface y={200} />
+        <Person
+          headX={150} headY={32} color={M}
+          torsoEndX={150} torsoEndY={115}
+          leftArmX={118} leftArmY={70} rightArmX={182} rightArmY={70}
+          leftLegX={132} leftLegY={200} rightLegX={168} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={62} color={F}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={118} leftArmY={82} rightArmX={182} rightArmY={82}
+          leftLegX={115} leftLegY={128} rightLegX={185} rightLegY={128}
+        />
+        <Connection x={150} y={108} />
       </>
     ),
-    // Tree
+    // 48. Tree - one leg wrapped
     () => (
       <>
-        {head(118, 38, M)}
-        {limb(118, 48, 118, 102, M)}
-        {limb(118, 102, 110, 158, M)}
-        {limb(118, 102, 128, 158, M)}
-        {head(142, 52, F)}
-        {limb(142, 62, 135, 100, F)}
-        {limb(135, 100, 118, 95, F)}
-        {limb(135, 100, 148, 120, F)}
-        {limb(118, 55, 135, 72, M)}
-        {limb(142, 68, 125, 78, F)}
+        <Surface y={200} />
+        <Person
+          headX={140} headY={32} color={M}
+          torsoEndX={140} torsoEndY={118}
+          leftArmX={115} leftArmY={72} rightArmX={165} rightArmY={72}
+          leftLegX={125} leftLegY={200} rightLegX={155} rightLegY={200}
+        />
+        <Person
+          headX={185} headY={52} color={F}
+          torsoEndX={178} torsoEndY={118}
+          leftArmX={155} leftArmY={78} rightArmX={208} rightArmY={78}
+          leftLegX={140} leftLegY={110} rightLegX={195} rightLegY={145}
+        />
+        <Connection x={162} y={112} />
       </>
     ),
-    // Flagpole
+    // 49. Flagpole
     () => (
       <>
-        {head(120, 35, M)}
-        {limb(120, 45, 120, 98, M)}
-        {limb(120, 98, 108, 158, M)}
-        {limb(120, 98, 132, 158, M)}
-        {head(120, 58, F)}
-        {limb(120, 68, 120, 95, F)}
-        {limb(120, 95, 105, 102, F)}
-        {limb(120, 95, 135, 102, F)}
-        {limb(120, 50, 105, 82, M)}
-        {limb(120, 50, 135, 82, M)}
+        <Surface y={200} />
+        <Person
+          headX={150} headY={28} color={M}
+          torsoEndX={150} torsoEndY={115}
+          leftArmX={115} leftArmY={68} rightArmX={185} rightArmY={68}
+          leftLegX={132} leftLegY={200} rightLegX={168} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={58} color={F}
+          torsoEndX={150} torsoEndY={108}
+          leftArmX={118} leftArmY={78} rightArmX={182} rightArmY={78}
+          leftLegX={115} leftLegY={122} rightLegX={185} rightLegY={122}
+        />
+        <Connection x={150} y={105} />
       </>
     ),
-    // Elevator
+    // 50. Elevator
     () => (
       <>
-        {head(120, 35, M)}
-        {limb(120, 45, 120, 95, M)}
-        {limb(120, 95, 108, 155, M)}
-        {limb(120, 95, 132, 155, M)}
-        {head(120, 58, F)}
-        {limb(120, 68, 120, 92, F)}
-        {limb(120, 92, 105, 98, F)}
-        {limb(120, 92, 135, 98, F)}
-        {limb(120, 50, 105, 80, M)}
-        {limb(120, 50, 135, 80, M)}
-        <path d="M 168 62 L 168 108" stroke="#555" strokeWidth="1.5" strokeDasharray="4,3" />
-        <polygon points="168,55 164,65 172,65" fill="#555" />
-        <polygon points="168,115 164,105 172,105" fill="#555" />
+        <Surface y={200} />
+        <Person
+          headX={150} headY={28} color={M}
+          torsoEndX={150} torsoEndY={112}
+          leftArmX={115} leftArmY={68} rightArmX={185} rightArmY={68}
+          leftLegX={132} leftLegY={200} rightLegX={168} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={58} color={F}
+          torsoEndX={150} torsoEndY={105}
+          leftArmX={118} leftArmY={78} rightArmX={182} rightArmY={78}
+          leftLegX={115} leftLegY={118} rightLegX={185} rightLegY={118}
+        />
+        {/* Up/down arrows */}
+        <path d="M 220 55 L 220 95" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <polygon points="220,50 216,60 224,60" fill="#666" />
+        <polygon points="220,100 216,90 224,90" fill="#666" />
+        <Connection x={150} y={105} />
       </>
     ),
   ];
@@ -865,166 +1183,220 @@ function renderSeated(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Chair sit
+    // 51. Chair Sit
     () => (
       <>
-        <rect x="80" y="115" width="80" height="6" fill="#333" rx="3" />
-        <line x1="85" y1="121" x2="85" y2="162" stroke="#333" strokeWidth="3" />
-        <line x1="155" y1="121" x2="155" y2="162" stroke="#333" strokeWidth="3" />
-        {head(120, 88, M)}
-        {limb(120, 98, 120, 118, M)}
-        {limb(120, 118, 105, 155, M)}
-        {limb(120, 118, 135, 155, M)}
-        {head(120, 52, F)}
-        {limb(120, 62, 120, 90, F)}
-        {limb(120, 90, 105, 110, F)}
-        {limb(120, 90, 135, 110, F)}
-        {limb(120, 70, 102, 80, F)}
-        {limb(120, 70, 138, 80, F)}
+        <Surface y={200} />
+        {/* Chair */}
+        <rect x="95" y="140" width="110" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="100" y1="148" x2="100" y2="200" stroke="#555" strokeWidth="3" />
+        <line x1="200" y1="148" x2="200" y2="200" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={150} headY={98} color={M}
+          torsoEndX={150} torsoEndY={142}
+          leftArmX={120} leftArmY={118} rightArmX={180} rightArmY={118}
+          leftLegX={128} leftLegY={185} rightLegX={172} rightLegY={185}
+        />
+        <Person
+          headX={150} headY={48} color={F}
+          torsoEndX={150} torsoEndY={100}
+          leftArmX={120} leftArmY={70} rightArmX={180} rightArmY={70}
+          leftLegX={125} leftLegY={125} rightLegX={175} rightLegY={125}
+        />
+        <Connection x={150} y={100} />
       </>
     ),
-    // Lap
+    // 52. Lap
     () => (
       <>
-        {head(102, 88, M)}
-        {limb(102, 98, 102, 125, M)}
-        {limb(102, 125, 90, 158, M)}
-        {limb(102, 125, 115, 158, M)}
-        {head(128, 58, F)}
-        {limb(128, 68, 122, 100, F)}
-        {limb(122, 100, 108, 118, F)}
-        {limb(122, 100, 135, 118, F)}
-        {limb(102, 105, 118, 88, M)}
+        <Surface y={200} />
+        <Person
+          headX={118} headY={98} color={M}
+          torsoEndX={118} torsoEndY={150}
+          leftArmX={90} leftArmY={122} rightArmX={148} rightArmY={122}
+          leftLegX={100} leftLegY={200} rightLegX={135} rightLegY={200}
+        />
+        <Person
+          headX={165} headY={55} color={F}
+          torsoEndX={155} torsoEndY={115}
+          leftArmX={135} leftArmY={78} rightArmX={188} rightArmY={78}
+          leftLegX={128} leftLegY={138} rightLegX={172} rightLegY={138}
+        />
+        <Connection x={145} y={115} />
       </>
     ),
-    // Seat rear
+    // 53. Seat (rear)
     () => (
       <>
-        {head(120, 88, M)}
-        {limb(120, 98, 120, 125, M)}
-        {limb(120, 125, 105, 158, M)}
-        {limb(120, 125, 135, 158, M)}
-        {head(120, 52, F)}
-        {limb(120, 62, 120, 95, F)}
-        {limb(120, 95, 108, 118, F)}
-        {limb(120, 95, 132, 118, F)}
-        {limb(120, 102, 108, 82, M)}
-        {limb(120, 102, 132, 82, M)}
+        <Surface y={200} />
+        <Person
+          headX={150} headY={98} color={M}
+          torsoEndX={150} torsoEndY={150}
+          leftArmX={120} leftArmY={122} rightArmX={180} rightArmY={122}
+          leftLegX={130} leftLegY={200} rightLegX={170} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={48} color={F}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={120} leftArmY={72} rightArmX={180} rightArmY={72}
+          leftLegX={128} leftLegY={135} rightLegX={172} rightLegY={135}
+        />
+        <Connection x={150} y={110} />
       </>
     ),
-    // Throne
+    // 54. Throne
     () => (
       <>
-        <rect x="75" y="108" width="90" height="6" fill="#333" rx="3" />
-        <line x1="75" y1="68" x2="75" y2="114" stroke="#333" strokeWidth="4" />
-        <line x1="82" y1="114" x2="82" y2="162" stroke="#333" strokeWidth="3" />
-        <line x1="158" y1="114" x2="158" y2="162" stroke="#333" strokeWidth="3" />
-        {head(120, 78, M)}
-        {limb(120, 88, 120, 112, M)}
-        {limb(120, 112, 105, 150, M)}
-        {limb(120, 112, 135, 150, M)}
-        {head(120, 42, F)}
-        {limb(120, 52, 120, 78, F)}
-        {limb(120, 78, 108, 100, F)}
-        {limb(120, 78, 132, 100, F)}
+        <Surface y={200} />
+        {/* Fancy chair */}
+        <rect x="90" y="130" width="120" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <rect x="88" y="75" width="10" height="60" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="95" y1="138" x2="95" y2="200" stroke="#555" strokeWidth="3" />
+        <line x1="205" y1="138" x2="205" y2="200" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={150} headY={88} color={M}
+          torsoEndX={150} torsoEndY={132}
+          leftArmX={120} leftArmY={108} rightArmX={180} rightArmY={108}
+          leftLegX={128} leftLegY={178} rightLegX={172} rightLegY={178}
+        />
+        <Person
+          headX={150} headY={38} color={F}
+          torsoEndX={150} torsoEndY={90}
+          leftArmX={120} leftArmY={60} rightArmX={180} rightArmY={60}
+          leftLegX={125} leftLegY={115} rightLegX={175} rightLegY={115}
+        />
+        <Connection x={150} y={90} />
       </>
     ),
-    // Lotus seat
+    // 55. Lotus Seat
     () => (
       <>
-        {head(102, 82, M)}
-        {limb(102, 92, 102, 125, M)}
-        {limb(102, 125, 88, 140, M)}
-        {limb(102, 125, 118, 140, M)}
-        {head(132, 78, F)}
-        {limb(132, 88, 128, 118, F)}
-        {limb(128, 118, 108, 128, F)}
-        {limb(128, 118, 142, 138, F)}
-        {limb(102, 100, 128, 95, M)}
-        {limb(132, 92, 108, 100, F)}
+        <Surface y={200} />
+        <Person
+          headX={118} headY={88} color={M}
+          torsoEndX={118} torsoEndY={145}
+          leftArmX={90} leftArmY={112} rightArmX={148} rightArmY={112}
+          leftLegX={95} leftLegY={170} rightLegX={142} rightLegY={170}
+        />
+        <Person
+          headX={168} headY={82} color={F}
+          torsoEndX={162} torsoEndY={138}
+          leftArmX={138} leftArmY={105} rightArmX={192} rightArmY={105}
+          leftLegX={130} leftLegY={155} rightLegX={178} rightLegY={160}
+        />
+        <Connection x={142} y={118} />
       </>
     ),
-    // Office
+    // 56. Office
     () => (
       <>
-        <rect x="65" y="115" width="110" height="6" fill="#333" rx="3" />
-        {head(120, 95, F)}
-        {limb(120, 105, 120, 118, F)}
-        {limb(120, 118, 100, 142, F)}
-        {limb(120, 118, 140, 142, F)}
-        {head(120, 48, M)}
-        {limb(120, 58, 120, 92, M)}
-        {limb(120, 92, 108, 112, M)}
-        {limb(120, 92, 132, 112, M)}
-        {limb(120, 98, 105, 108, F)}
-        {limb(120, 98, 135, 108, F)}
+        <Surface y={200} />
+        {/* Desk */}
+        <rect x="72" y="138" width="156" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <Person
+          headX={150} headY={108} color={F}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={122} leftArmY={125} rightArmX={178} rightArmY={125}
+          leftLegX={125} leftLegY={172} rightLegX={175} rightLegY={172}
+        />
+        <Person
+          headX={150} headY={45} color={M}
+          torsoEndX={150} torsoEndY={108}
+          leftArmX={120} leftArmY={72} rightArmX={180} rightArmY={72}
+          leftLegX={130} leftLegY={145} rightLegX={170} rightLegY={145}
+        />
+        <Connection x={150} y={108} />
       </>
     ),
-    // Couch
+    // 57. Couch
     () => (
       <>
-        <rect x="55" y="115" width="130" height="10" fill="#2a2a2a" stroke="#444" strokeWidth="1.5" rx="5" />
-        <rect x="52" y="88" width="10" height="35" fill="#2a2a2a" stroke="#444" strokeWidth="1.5" rx="4" />
-        <rect x="178" y="88" width="10" height="35" fill="#2a2a2a" stroke="#444" strokeWidth="1.5" rx="4" />
-        {head(120, 82, M)}
-        {limb(120, 92, 120, 118, M)}
-        {limb(120, 118, 105, 148, M)}
-        {limb(120, 118, 135, 148, M)}
-        {head(120, 48, F)}
-        {limb(120, 58, 120, 85, F)}
-        {limb(120, 85, 105, 108, F)}
-        {limb(120, 85, 135, 108, F)}
+        <Surface y={200} />
+        {/* Couch */}
+        <rect x="60" y="138" width="180" height="12" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="5" />
+        <rect x="56" y="100" width="14" height="50" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="5" />
+        <rect x="230" y="100" width="14" height="50" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="5" />
+        <Person
+          headX={150} headY={90} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={118} leftArmY={112} rightArmX={182} rightArmY={112}
+          leftLegX={128} leftLegY={180} rightLegX={172} rightLegY={180}
+        />
+        <Person
+          headX={150} headY={42} color={F}
+          torsoEndX={150} torsoEndY={95}
+          leftArmX={118} leftArmY={65} rightArmX={182} rightArmY={65}
+          leftLegX={125} leftLegY={120} rightLegX={175} rightLegY={120}
+        />
+        <Connection x={150} y={95} />
       </>
     ),
-    // Bench
+    // 58. Bench
     () => (
       <>
-        <rect x="70" y="118" width="100" height="6" fill="#333" rx="3" />
-        <line x1="75" y1="124" x2="75" y2="162" stroke="#333" strokeWidth="3" />
-        <line x1="165" y1="124" x2="165" y2="162" stroke="#333" strokeWidth="3" />
-        {head(120, 88, M)}
-        {limb(120, 98, 120, 122, M)}
-        {limb(120, 122, 105, 155, M)}
-        {limb(120, 122, 135, 155, M)}
-        {head(120, 52, F)}
-        {limb(120, 62, 120, 90, F)}
-        {limb(120, 90, 105, 112, F)}
-        {limb(120, 90, 135, 112, F)}
-        {limb(120, 100, 105, 78, M)}
-        {limb(120, 100, 135, 78, M)}
+        <Surface y={200} />
+        <rect x="85" y="142" width="130" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="90" y1="150" x2="90" y2="200" stroke="#555" strokeWidth="3" />
+        <line x1="210" y1="150" x2="210" y2="200" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={150} headY={98} color={M}
+          torsoEndX={150} torsoEndY={145}
+          leftArmX={118} leftArmY={118} rightArmX={182} rightArmY={118}
+          leftLegX={128} leftLegY={185} rightLegX={172} rightLegY={185}
+        />
+        <Person
+          headX={150} headY={48} color={F}
+          torsoEndX={150} torsoEndY={100}
+          leftArmX={118} leftArmY={70} rightArmX={182} rightArmY={70}
+          leftLegX={125} leftLegY={125} rightLegX={175} rightLegY={125}
+        />
+        <Connection x={150} y={100} />
       </>
     ),
-    // Rocking chair
+    // 59. Rocking Chair
     () => (
       <>
-        <path d="M 65 162 Q 120 148 175 162" fill="none" stroke="#444" strokeWidth="3" />
-        <rect x="80" y="115" width="80" height="6" fill="#333" rx="3" />
-        <line x1="80" y1="72" x2="80" y2="121" stroke="#333" strokeWidth="3" />
-        {head(120, 82, M)}
-        {limb(120, 92, 120, 118, M)}
-        {limb(120, 118, 105, 148, M)}
-        {limb(120, 118, 135, 148, M)}
-        {head(120, 48, F)}
-        {limb(120, 58, 120, 85, F)}
-        {limb(120, 85, 105, 108, F)}
-        {limb(120, 85, 135, 108, F)}
+        <Surface y={200} />
+        {/* Rocking base */}
+        <path d="M 75 198 Q 150 182 225 198" fill="none" stroke="#555" strokeWidth="3" />
+        <rect x="95" y="138" width="110" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="95" y1="85" x2="95" y2="142" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={150} headY={90} color={M}
+          torsoEndX={150} torsoEndY={140}
+          leftArmX={118} leftArmY={112} rightArmX={182} rightArmY={112}
+          leftLegX={128} leftLegY={178} rightLegX={172} rightLegY={178}
+        />
+        <Person
+          headX={150} headY={42} color={F}
+          torsoEndX={150} torsoEndY={95}
+          leftArmX={118} leftArmY={65} rightArmX={182} rightArmY={65}
+          leftLegX={125} leftLegY={118} rightLegX={175} rightLegY={118}
+        />
+        <Connection x={150} y={95} />
       </>
     ),
-    // Table
+    // 60. Table
     () => (
       <>
-        <rect x="62" y="115" width="116" height="6" fill="#333" rx="3" />
-        <line x1="68" y1="121" x2="68" y2="162" stroke="#333" strokeWidth="3" />
-        <line x1="172" y1="121" x2="172" y2="162" stroke="#333" strokeWidth="3" />
-        {head(98, 98, F)}
-        {limb(98, 108, 118, 115, F)}
-        {limb(118, 115, 105, 140, F)}
-        {limb(118, 115, 132, 140, F)}
-        {head(148, 55, M)}
-        {limb(148, 65, 142, 100, M)}
-        {limb(142, 100, 132, 140, M)}
-        {limb(142, 100, 155, 140, M)}
-        {limb(148, 75, 125, 100, M)}
+        <Surface y={200} />
+        {/* Table */}
+        <rect x="72" y="138" width="156" height="8" fill="#2a2a2a" stroke="#555" strokeWidth="1.5" rx="3" />
+        <line x1="78" y1="146" x2="78" y2="200" stroke="#555" strokeWidth="3" />
+        <line x1="222" y1="146" x2="222" y2="200" stroke="#555" strokeWidth="3" />
+        <Person
+          headX={115} headY={108} color={F}
+          torsoEndX={135} torsoEndY={140}
+          leftArmX={95} leftArmY={125} rightArmX={135} rightArmY={98}
+          leftLegX={118} leftLegY={170} rightLegX={155} rightLegY={170}
+        />
+        <Person
+          headX={185} headY={52} color={M}
+          torsoEndX={175} torsoEndY={125}
+          leftArmX={150} leftArmY={85} rightArmX={208} rightArmY={85}
+          leftLegX={158} leftLegY={175} rightLegX={192} rightLegY={175}
+        />
+        <Connection x={158} y={128} />
       </>
     ),
   ];
@@ -1037,161 +1409,213 @@ function renderAdvanced(id: number) {
   const M = ManColor;
   const F = WomanColor;
   const variations = [
-    // Stand and carry
+    // 61. Stand and Carry
     () => (
       <>
-        {head(120, 35, M)}
-        {limb(120, 45, 120, 95, M)}
-        {limb(120, 95, 108, 155, M)}
-        {limb(120, 95, 132, 155, M)}
-        {head(120, 58, F)}
-        {limb(120, 68, 120, 95, F)}
-        {limb(120, 95, 100, 88, F)}
-        {limb(120, 95, 140, 88, F)}
-        {limb(120, 50, 100, 82, M)}
-        {limb(120, 50, 140, 82, M)}
+        <Surface y={200} />
+        <Person
+          headX={150} headY={28} color={M}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={112} leftArmY={68} rightArmX={188} rightArmY={68}
+          leftLegX={130} leftLegY={200} rightLegX={170} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={58} color={F}
+          torsoEndX={150} torsoEndY={105}
+          leftArmX={112} leftArmY={78} rightArmX={188} rightArmY={78}
+          leftLegX={108} leftLegY={120} rightLegX={192} rightLegY={120}
+        />
+        <Connection x={150} y={102} />
       </>
     ),
-    // Flying frog
+    // 62. Flying Frog
     () => (
       <>
-        {head(100, 72, F)}
-        {limb(100, 82, 100, 115, F)}
-        {limb(100, 115, 82, 135, F)}
-        {limb(100, 115, 118, 135, F)}
-        {limb(100, 90, 82, 100, F)}
-        {limb(100, 90, 118, 100, F)}
-        {head(148, 85, M)}
-        {limb(148, 95, 142, 122, M)}
-        {limb(142, 122, 132, 158, M)}
-        {limb(142, 122, 155, 158, M)}
-        {limb(148, 102, 122, 115, M)}
+        <Surface y={200} />
+        <Person
+          headX={110} headY={72} color={F}
+          torsoEndX={110} torsoEndY={128}
+          leftArmX={82} leftArmY={98} rightArmX={138} rightArmY={98}
+          leftLegX={85} leftLegY={155} rightLegX={135} rightLegY={155}
+        />
+        <Person
+          headX={195} headY={85} color={M}
+          torsoEndX={185} torsoEndY={145}
+          leftArmX={155} leftArmY={115} rightArmX={218} rightArmY={115}
+          leftLegX={170} leftLegY={200} rightLegX={200} rightLegY={200}
+        />
+        <Connection x={155} y={130} />
       </>
     ),
-    // Suspended
+    // 63. Suspended
     () => (
       <>
-        <line x1="55" y1="28" x2="185" y2="28" stroke="#444" strokeWidth="4" />
-        {head(120, 45, M)}
-        {limb(120, 55, 120, 95, M)}
-        {limb(120, 95, 108, 132, M)}
-        {limb(120, 95, 132, 132, M)}
-        {limb(120, 60, 92, 28, M)}
-        {limb(120, 60, 148, 28, M)}
-        {head(120, 70, F)}
-        {limb(120, 80, 120, 98, F)}
-        {limb(120, 98, 105, 108, F)}
-        {limb(120, 98, 135, 108, F)}
+        <Surface y={200} />
+        {/* Overhead bar */}
+        <rect x="55" y="22" width="190" height="10" fill="#2a2a2a" stroke="#555" strokeWidth="2" rx="4" />
+        <Person
+          headX={150} headY={48} color={M}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={105} leftArmY={32} rightArmX={195} rightArmY={32}
+          leftLegX={130} leftLegY={160} rightLegX={170} rightLegY={160}
+        />
+        <Person
+          headX={150} headY={72} color={F}
+          torsoEndX={150} torsoEndY={110}
+          leftArmX={118} leftArmY={90} rightArmX={182} rightArmY={90}
+          leftLegX={115} leftLegY={128} rightLegX={185} rightLegY={128}
+        />
+        <Connection x={150} y={108} />
       </>
     ),
-    // Wheel
+    // 64. Wheel
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 115, F)}
-        {limb(120, 115, 102, 155, F)}
-        {limb(120, 115, 138, 155, F)}
-        {head(120, 65, M)}
-        {limb(120, 75, 120, 110, M)}
-        {limb(120, 110, 108, 135, M)}
-        {limb(120, 110, 132, 135, M)}
-        <path d="M 158 78 A 25 25 0 1 1 158 118" fill="none" stroke="#555" strokeWidth="2" strokeDasharray="4,3" />
-        <polygon points="158,118 154,110 162,110" fill="#555" />
+        <Surface y={200} />
+        <Person
+          headX={150} headY={178} color={F}
+          torsoEndX={150} torsoEndY={138}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={125} leftLegY={200} rightLegX={175} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={62} color={M}
+          torsoEndX={150} torsoEndY={120}
+          leftArmX={118} leftArmY={88} rightArmX={182} rightArmY={88}
+          leftLegX={128} leftLegY={155} rightLegX={172} rightLegY={155}
+        />
+        {/* Rotation arrow */}
+        <path d="M 210 75 A 30 30 0 1 1 210 135" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="5,3" />
+        <polygon points="210,135 205,125 215,125" fill="#666" />
+        <Connection x={150} y={125} />
       </>
     ),
-    // Corkscrew
+    // 65. Corkscrew
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 115, F)}
-        {limb(120, 115, 105, 155, F)}
-        {limb(120, 115, 135, 155, F)}
-        {head(128, 65, M)}
-        {limb(128, 75, 120, 110, M)}
-        {limb(120, 110, 108, 135, M)}
-        {limb(120, 110, 132, 135, M)}
-        <path d="M 155 70 Q 162 85 155 100 Q 148 115 155 130" fill="none" stroke="#555" strokeWidth="2" strokeDasharray="4,3" />
+        <Surface y={200} />
+        <Person
+          headX={150} headY={178} color={F}
+          torsoEndX={150} torsoEndY={138}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={125} leftLegY={200} rightLegX={175} rightLegY={200}
+        />
+        <Person
+          headX={162} headY={62} color={M}
+          torsoEndX={152} torsoEndY={120}
+          leftArmX={128} leftArmY={88} rightArmX={192} rightArmY={88}
+          leftLegX={130} leftLegY={155} rightLegX={172} rightLegY={155}
+        />
+        {/* Spiral */}
+        <path d="M 210 65 Q 220 85 210 105 Q 200 125 210 145" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <Connection x={152} y={125} />
       </>
     ),
-    // Gantry
+    // 66. Gantry
     () => (
       <>
-        <line x1="55" y1="30" x2="55" y2="162" stroke="#444" strokeWidth="3" />
-        <line x1="185" y1="30" x2="185" y2="162" stroke="#444" strokeWidth="3" />
-        <line x1="55" y1="30" x2="185" y2="30" stroke="#444" strokeWidth="3" />
-        {head(120, 48, M)}
-        {limb(120, 58, 120, 98, M)}
-        {limb(120, 98, 108, 135, M)}
-        {limb(120, 98, 132, 135, M)}
-        {limb(120, 62, 60, 30, M)}
-        {limb(120, 62, 180, 30, M)}
-        {head(120, 75, F)}
-        {limb(120, 85, 120, 102, F)}
-        {limb(120, 102, 105, 115, F)}
-        {limb(120, 102, 135, 115, F)}
+        <Surface y={200} />
+        {/* Frame */}
+        <line x1="60" y1="30" x2="60" y2="200" stroke="#555" strokeWidth="4" />
+        <line x1="240" y1="30" x2="240" y2="200" stroke="#555" strokeWidth="4" />
+        <line x1="60" y1="30" x2="240" y2="30" stroke="#555" strokeWidth="4" />
+        <Person
+          headX={150} headY={48} color={M}
+          torsoEndX={150} torsoEndY={112}
+          leftArmX={80} leftArmY={30} rightArmX={220} rightArmY={30}
+          leftLegX={128} leftLegY={165} rightLegX={172} rightLegY={165}
+        />
+        <Person
+          headX={150} headY={72} color={F}
+          torsoEndX={150} torsoEndY={112}
+          leftArmX={118} leftArmY={90} rightArmX={182} rightArmY={90}
+          leftLegX={115} leftLegY={130} rightLegX={185} rightLegY={130}
+        />
+        <Connection x={150} y={110} />
       </>
     ),
-    // Space monkey
+    // 67. Space Monkey
     () => (
       <>
-        {head(120, 148, F)}
-        {limb(120, 138, 120, 115, F)}
-        {limb(120, 115, 102, 155, F)}
-        {limb(120, 115, 138, 155, F)}
-        {head(120, 68, M)}
-        {limb(120, 78, 120, 110, M)}
-        {limb(120, 110, 108, 132, M)}
-        {limb(120, 110, 132, 132, M)}
-        <path d="M 92 62 Q 120 55 148 62" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3,3" />
-        <path d="M 95 56 Q 120 49 145 56" fill="none" stroke="#444" strokeWidth="1" strokeDasharray="3,3" />
+        <Surface y={200} />
+        <Person
+          headX={150} headY={178} color={F}
+          torsoEndX={150} torsoEndY={138}
+          leftArmX={120} leftArmY={158} rightArmX={180} rightArmY={158}
+          leftLegX={125} leftLegY={200} rightLegX={175} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={68} color={M}
+          torsoEndX={150} torsoEndY={122}
+          leftArmX={118} leftArmY={92} rightArmX={182} rightArmY={92}
+          leftLegX={128} leftLegY={152} rightLegX={172} rightLegY={152}
+        />
+        {/* Float effect */}
+        <path d="M 105 58 Q 150 48 195 58" fill="none" stroke="#666" strokeWidth="1.5" strokeDasharray="4,3" />
+        <path d="M 110 50 Q 150 40 190 50" fill="none" stroke="#555" strokeWidth="1" strokeDasharray="3,3" />
+        <Connection x={150} y={125} />
       </>
     ),
-    // Origami
+    // 68. Origami
     () => (
       <>
-        {head(95, 115, F)}
-        {limb(95, 125, 110, 108, F)}
-        {limb(110, 108, 90, 88, F)}
-        {limb(110, 108, 125, 145, F)}
-        {limb(95, 125, 82, 148, F)}
-        {head(148, 75, M)}
-        {limb(148, 85, 135, 112, M)}
-        {limb(135, 112, 118, 142, M)}
-        {limb(135, 112, 152, 142, M)}
-        {limb(148, 92, 118, 105, M)}
+        <Surface y={200} />
+        <Person
+          headX={105} headY={130} color={F}
+          torsoEndX={130} torsoEndY={110}
+          leftArmX={85} leftArmY={148} rightArmX={118} rightArmY={118}
+          leftLegX={105} leftLegY={100} rightLegX={150} rightLegY={165}
+        />
+        <Person
+          headX={195} headY={72} color={M}
+          torsoEndX={175} torsoEndY={130}
+          leftArmX={148} leftArmY={98} rightArmX={218} rightArmY={98}
+          leftLegX={155} leftLegY={175} rightLegX={195} rightLegY={175}
+        />
+        <Connection x={158} y={125} />
       </>
     ),
-    // Pretzel twist
+    // 69. Pretzel Twist
     () => (
       <>
-        {head(88, 110, F)}
-        {limb(98, 110, 118, 122, F)}
-        {limb(118, 122, 145, 110, F)}
-        {limb(118, 122, 105, 155, F)}
-        {head(148, 88, M)}
-        {limb(142, 95, 118, 122, M)}
-        {limb(118, 122, 92, 140, M)}
-        {limb(118, 122, 138, 155, M)}
-        <path d="M 110 132 Q 118 125 126 132 Q 134 140 142 132" fill="none" stroke="#555" strokeWidth="2" strokeDasharray="3,3" />
+        <Surface y={200} />
+        <Person
+          headX={100} headY={125} color={F}
+          torsoEndX={135} torsoEndY={148}
+          leftArmX={78} leftArmY={142} rightArmX={118} rightArmY={112}
+          leftLegX={170} leftLegY={132} rightLegX={125} rightLegY={185}
+        />
+        <Person
+          headX={200} headY={100} color={M}
+          torsoEndX={168} torsoEndY={148}
+          leftArmX={145} leftArmY={118} rightArmX={222} rightArmY={118}
+          leftLegX={120} leftLegY={170} rightLegX={185} rightLegY={185}
+        />
+        {/* Twist */}
+        <path d="M 130 165 Q 145 155 160 165 Q 175 175 190 165" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="4,3" />
+        <Connection x={152} y={148} />
       </>
     ),
-    // Dragon
+    // 70. Dragon
     () => (
       <>
-        {head(120, 142, M)}
-        {limb(120, 132, 120, 108, M)}
-        {limb(120, 108, 100, 155, M)}
-        {limb(120, 108, 140, 155, M)}
-        {head(120, 48, F)}
-        {limb(120, 58, 120, 88, F)}
-        {limb(120, 88, 100, 100, F)}
-        {limb(120, 88, 140, 100, F)}
-        {limb(120, 65, 95, 55, F)}
-        {limb(120, 65, 145, 55, F)}
-        {limb(120, 115, 105, 92, M)}
-        {limb(120, 115, 135, 92, M)}
-        <path d="M 78 42 L 85 35 L 80 48 L 88 40" fill="none" stroke={F} strokeWidth="1.5" opacity="0.6" />
-        <path d="M 155 42 L 162 35 L 157 48 L 165 40" fill="none" stroke={M} strokeWidth="1.5" opacity="0.6" />
+        <Surface y={200} />
+        <Person
+          headX={150} headY={170} color={M}
+          torsoEndX={150} torsoEndY={125}
+          leftArmX={115} leftArmY={145} rightArmX={185} rightArmY={145}
+          leftLegX={125} leftLegY={200} rightLegX={175} rightLegY={200}
+        />
+        <Person
+          headX={150} headY={45} color={F}
+          torsoEndX={150} torsoEndY={105}
+          leftArmX={108} leftArmY={65} rightArmX={192} rightArmY={65}
+          leftLegX={115} leftLegY={125} rightLegX={185} rightLegY={125}
+        />
+        <Connection x={150} y={110} />
+        {/* Power sparks */}
+        <path d="M 85 38 L 92 30 L 88 42 L 96 34" fill="none" stroke={F} strokeWidth="2" opacity="0.5" />
+        <path d="M 208 38 L 215 30 L 211 42 L 219 34" fill="none" stroke={M} strokeWidth="2" opacity="0.5" />
       </>
     ),
   ];
