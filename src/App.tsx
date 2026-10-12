@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { positions, Position } from './data/positions';
 import PositionIllustration from './components/PositionIllustration';
@@ -6,35 +6,44 @@ import PositionIllustration from './components/PositionIllustration';
 function App() {
   const [currentPosition, setCurrentPosition] = useState<Position | null>(null);
   const [history, setHistory] = useState<Position[]>([]);
-  const [usedIds, setUsedIds] = useState<Set<number>>(new Set());
   const [isSpinning, setIsSpinning] = useState(false);
+  const usedIdsRef = useRef<Set<number>>(new Set());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getRandomPosition = useCallback(() => {
+    if (isSpinning) return;
     setIsSpinning(true);
 
-    // Quick shuffle animation
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     let count = 0;
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       const randomIdx = Math.floor(Math.random() * positions.length);
       setCurrentPosition(positions[randomIdx]);
       count++;
-      if (count > 10) {
-        clearInterval(interval);
+      if (count > 12) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
 
         // Pick final position (avoid repeats if possible)
-        let available = positions.filter(p => !usedIds.has(p.id));
+        let available = positions.filter(p => !usedIdsRef.current.has(p.id));
         if (available.length === 0) {
-          setUsedIds(new Set());
+          usedIdsRef.current = new Set();
           available = positions;
         }
         const chosen = available[Math.floor(Math.random() * available.length)];
+        usedIdsRef.current.add(chosen.id);
         setCurrentPosition(chosen);
-        setUsedIds(prev => new Set([...prev, chosen.id]));
         setHistory(prev => [chosen, ...prev].slice(0, 5));
         setIsSpinning(false);
       }
-    }, 80);
-  }, [usedIds]);
+    }, 70);
+  }, [isSpinning]);
 
   const getDifficultyStars = (difficulty: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -68,14 +77,14 @@ function App() {
       </header>
 
       {/* Main Card */}
-      <div className="w-full max-w-md flex-1 flex flex-col">
+      <div className="w-full max-w-lg flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {currentPosition ? (
             <motion.div
               key={currentPosition.id}
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ duration: 0.3 }}
               className="bg-gradient-to-b from-gray-900/80 to-black border border-red-900/30 rounded-2xl p-5 mb-4 backdrop-blur-sm"
             >
@@ -89,11 +98,11 @@ function App() {
                 </div>
               </div>
 
-              {/* Illustration */}
-              <div className="bg-black/50 rounded-xl p-3 mb-4 border border-gray-800/50">
+              {/* Illustration - BIG */}
+              <div className="bg-black rounded-xl p-2 mb-4 border border-gray-800/50">
                 <PositionIllustration
                   positionId={currentPosition.id}
-                  className="w-full h-auto max-h-48"
+                  className="w-full h-auto"
                 />
               </div>
 
@@ -109,7 +118,7 @@ function App() {
 
               {/* Instructions */}
               <div className="bg-red-950/20 rounded-xl p-4 border border-red-900/20">
-                <h3 className="text-red-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                <h3 className="text-red-400 font-semibold text-sm mb-3 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
